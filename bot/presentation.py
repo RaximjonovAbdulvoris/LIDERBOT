@@ -165,6 +165,7 @@ async def load_emoji_packs(application):
         'OTHERPARK': ('statuswb', 'FinanceEmoji', 'IslomjonAnimeEmoji'),
         'DELETE': ('statuswb', 'ApplicationEmoji'),
         'BRAND': ('FinanceEmoji', 'IslomjonAnimeEmoji'),
+        'PAYOUT': ('FinanceEmoji', 'NewsEmoji'),
         'CONTACT': ('IslomjonAnimeEmoji', 'NewsEmoji'),
         'APPLICATION': ('ApplicationEmoji', 'IslomjonAnimeEmoji', 'NewsEmoji'),
         'DOCUMENT': ('ApplicationEmoji', 'IslomjonAnimeEmoji', 'NewsEmoji'),
@@ -173,7 +174,7 @@ async def load_emoji_packs(application):
         'REGION': ('IslomjonAnimeEmoji', 'ApplicationEmoji', 'NewsEmoji'),
     }
     for action, options in preferred.items():
-        selected = next((s for emoji in options for name in by_pack[action]
+        selected = next((s for emoji in options for name in by_pack.get(action, ())
                          for s in packs.get(name, [])
                          if (s.emoji or '').replace('\ufe0f', '') == emoji), None)
         if selected:

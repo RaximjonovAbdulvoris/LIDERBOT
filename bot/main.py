@@ -60,7 +60,10 @@ async def post_init(application):
     from bot.legacy_migration import migrate_records
     migrate_records(application.bot_data)
     from bot.presentation import load_emoji_packs
-    await load_emoji_packs(application)
+    try:
+        await load_emoji_packs(application)
+    except Exception as error:
+        logger.warning("Premium assets unavailable (%s); continuing with standard icons.", type(error).__name__)
     await warmup_templates(application)
     application.job_queue.run_once(refresh_controls, when=2)
     from bot.background_ocr import resume_pending
