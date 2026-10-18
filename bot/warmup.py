@@ -12,13 +12,13 @@ import os
 
 from telegram.ext import Application
 
-from bot.config import DRIVER_GROUPS, TEMPLATES_DIR, template_path
+from bot.config import template_path
+from bot.regions import driver_groups
 
 logger = logging.getLogger(__name__)
 
 TEMPLATE_NAMES = [
     "passport_front",
-    "passport_back",
     "license_front",
     "license_back",
     "tech_front",
@@ -34,11 +34,12 @@ TEMPLATE_NAMES = [
 
 async def warmup_templates(app: Application) -> None:
     """Pre-upload templates and cache file_ids."""
-    if not DRIVER_GROUPS:
+    groups = driver_groups()
+    if not groups:
         logger.warning("warmup: DRIVER_GROUPS empty, skipping")
         return
 
-    warmup_chat = DRIVER_GROUPS[0]
+    warmup_chat = groups[0]
     cache: dict[str, str] = app.bot_data.setdefault("template_file_ids", {})
 
     for name in TEMPLATE_NAMES:

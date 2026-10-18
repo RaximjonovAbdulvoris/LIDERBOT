@@ -58,3 +58,10 @@ __pycache__/
 
 # Runtime state must never be published
 *.pkl
+
+.venv/
+venv/
+*.key
+*.sqlite3
+*.sqlite3-*
+/visual_templates/

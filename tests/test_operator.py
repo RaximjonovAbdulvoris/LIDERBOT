@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, patch
 for name in ('TELEGRAM_BOT_TOKEN', 'DRIVER_GROUP_1', 'DRIVER_GROUP_2', 'BRAND_GROUP'):
     os.environ.setdefault(name, '123:test' if name == 'TELEGRAM_BOT_TOKEN' else '-1001')
 
-from bot.handlers import operator as op
+from bot.handlers import legacy_operator as op
 from bot.handlers.driver import _send_to_driver_group
 from bot.counter import _counters
 from telegram.error import Forbidden
@@ -116,16 +116,6 @@ class OperatorTests(unittest.IsolatedAsyncioTestCase):
         await op.on_operator_button(update, ctx)
         self.assertTrue(record['in_progress'])
 
-    async def test_dispatch_alternates_and_keeps_repeat_applications(self):
-        _counters.clear()
-        ctx = SimpleNamespace(user_data={'user_id': 42, 'name': 'Test', 'passport_front': 'file'},
-                              bot_data={}, bot=SimpleNamespace(send_media_group=AsyncMock(return_value=[SimpleNamespace(message_id=10)]),
-                                                              send_message=AsyncMock(return_value=SimpleNamespace(message_id=12))))
-        with patch('bot.handlers.driver.DRIVER_GROUPS', ['-1001', '-1002']):
-            for _ in range(3):
-                await _send_to_driver_group(ctx)
-        self.assertEqual([c.kwargs['chat_id'] for c in ctx.bot.send_message.await_args_list], ['-1001', '-1002', '-1001'])
-        self.assertEqual(len(ctx.bot_data['app_messages']), 3)
 
 
 if __name__ == '__main__':

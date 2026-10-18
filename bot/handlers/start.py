@@ -1,14 +1,20 @@
 from telegram import ReplyKeyboardMarkup, Update
+from bot.presentation import menu_button
 from telegram.ext import ContextTypes, ConversationHandler, MessageHandler, filters
 
 MENU_DRIVER = "📝 Ulanish uchun Ariza"
 MENU_BRAND = "🎨 Brend Ariza"
 MENU_PAYOUT = "💰 PUL YECHISH BOTI"
 
-MAIN_KEYBOARD = ReplyKeyboardMarkup(
-    [[MENU_DRIVER], [MENU_BRAND], [MENU_PAYOUT]],
-    resize_keyboard=True,
-)
+def main_keyboard(region=None):
+    # Build after premium assets load; cached import-time icons can be stale.
+    return ReplyKeyboardMarkup(
+        [[menu_button(MENU_DRIVER, icon='DRIVER')],
+         [menu_button(MENU_BRAND, icon='BRAND')],
+         [menu_button(MENU_PAYOUT, icon='PAYOUT')]], resize_keyboard=True)
+
+
+MAIN_KEYBOARD = main_keyboard()
 
 WELCOME_TEXT = (
     "🚖 *WB LIDER TAXI* botiga xush kelibsiz!\n\n"
@@ -19,18 +25,20 @@ WELCOME_TEXT = (
 )
 
 PAYOUT_TEXT = (
-    "💰 *PUL YECHISH BOTI:* @liderpul\_bot\n\n"
+    "💰 *PUL YECHISH BOTI:* @liderpul\\_bot\n\n"
     "📞 *PARK NOMERI:* +998901819191\n\n"
     "✉️ *TELEGRAM ORQALI MUROJAT:* @WBlider"
 )
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    if update.effective_chat.type != "private":
+        return ConversationHandler.END
     context.user_data.clear()
     await update.message.reply_text(
         WELCOME_TEXT,
         parse_mode="Markdown",
-        reply_markup=MAIN_KEYBOARD,
+        reply_markup=main_keyboard(),
     )
     return ConversationHandler.END
 
@@ -39,19 +47,23 @@ async def show_payout(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     await update.message.reply_text(
         PAYOUT_TEXT,
         parse_mode="Markdown",
-        reply_markup=MAIN_KEYBOARD,
+        reply_markup=main_keyboard(),
         disable_web_page_preview=True,
     )
 
 
 def build_payout_handler() -> MessageHandler:
-    return MessageHandler(filters.Regex(f"^{MENU_PAYOUT}$"), show_payout)
+    return MessageHandler(filters.ChatType.PRIVATE & filters.Regex(r"^(?:💰 )?PUL YECHISH BOTI$"), show_payout)
 
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data.clear()
     await update.message.reply_text(
         "❌ Bekor qilindi. Qaytadan boshlash uchun /start bosing.",
-        reply_markup=MAIN_KEYBOARD,
+        reply_markup=main_keyboard(),
     )
     return ConversationHandler.END
+
+
+async def require_region(update, context, allowed_regions=None):
+    return update.effective_chat.type == 'private'

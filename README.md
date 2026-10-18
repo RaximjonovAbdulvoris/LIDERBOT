@@ -48,3 +48,7 @@ python -m unittest discover -s tests -v
 Testlar Telegramga ulanmaydi. Ommaviy ishga tushirishdan oldin har ikkala
 asosiy guruhga sinov arizasi yuborib, Chala rasm, Boshqa park, Jarayonda,
 Tayyor va O'chirish yo'llarini haqiqiy guruhlarda tekshiring.
+
+## Updated driver workflow
+
+Local document OCR, encrypted state migration, ZIP downloads, progress toggles and administrator-only controls are included. The menu remains Ulanish / Brend / Pul yechish; Brand stays a plain message. See [LIDER_UPGRADE.md](LIDER_UPGRADE.md) for deployment, existing-record compatibility and privacy/accuracy limits.
