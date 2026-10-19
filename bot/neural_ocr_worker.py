@@ -142,7 +142,8 @@ def licence_identity(words):
                       if w.confidence >= 90 and w.left > second.left
                       and abs(w.top + w.height / 2 - second.top - second.height / 2)
                       < max(w.height, second.height) * .55
-                      and 0 <= w.left - second.left - second.width < max(w.height, second.height) * 2.5
+                      and -second.width * .5 <= w.left - second.left - second.width
+                      < max(w.height, second.height) * 2.5
                       and clean_name(w.text)]
         if attached:
             given_rows = [(second, attached)]

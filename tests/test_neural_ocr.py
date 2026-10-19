@@ -27,6 +27,16 @@ class NeuralOCRTests(unittest.IsolatedAsyncioTestCase):
         words[0] = row('EXAMPLE', x=700, y=628, height=24)
         self.assertIsNone(licence_identity(words))
 
+    def test_split_field_two_label_overlaps_the_name_box(self):
+        from bot.neural_ocr_worker import licence_identity
+        words = [row('EXAMPLE', x=507, y=302, width=93, height=28, confidence=97),
+                 row('2', x=488, y=331, width=27, height=20),
+                 row('PERSON', x=511, y=325, width=93, height=28),
+                 row("PARENT O'GLI", x=515, y=347, width=109, height=29),
+                 row('3.TESTCITY24.10.2001', x=487, y=365, width=260, height=35)]
+        self.assertEqual(licence_identity(words), ('EXAMPLE', 'PERSON'))
+        self.assertIsNone(licence_identity(words[:-1]))
+
     def test_split_birth_label_and_dropped_date_punctuation(self):
         values = fields_from_rows([
             row('3.', x=430, y=265, width=30, height=23, confidence=89),
