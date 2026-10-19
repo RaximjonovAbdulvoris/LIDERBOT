@@ -64,7 +64,7 @@ class LiderUpgradeTests(unittest.IsolatedAsyncioTestCase):
                 await driver._send_to_driver_group(ctx)
             records = list(ctx.bot_data['applications'].values())
             self.assertEqual([r['group_chat_id'] for r in records], [-1001, -1002, -1001])
-            self.assertEqual([r['code'] for r in records], ['LD-000001', 'LD-000002', 'LD-000003'])
+            self.assertEqual([r['code'] for r in records], ['1', '2', '3'])
             self.assertEqual(len(ctx.bot_data['applications']), 3)
             self.assertTrue(all(r['media_albums'] for r in records))
             self.assertNotIn('Hudud:', ctx.bot.send_message.await_args.kwargs['text'])
@@ -93,10 +93,10 @@ class LiderUpgradeTests(unittest.IsolatedAsyncioTestCase):
 
     def test_counter_never_allocates_for_started_or_cancelled_form(self):
         with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, {'PERSIST_DIR': tmp}):
-            self.assertEqual(application_code({}), 'LD-000001')
+            self.assertEqual(application_code({}), '1')
             data = {}
-            self.assertEqual(application_code(data), 'LD-000002')
-            self.assertEqual(application_code(data), 'LD-000002')
+            self.assertEqual(application_code(data), '2')
+            self.assertEqual(application_code(data), '2')
 
     def test_route_settings_do_not_copy_another_bot_or_accept_duplicate_groups(self):
         with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, {'PERSIST_DIR': tmp}):

@@ -124,7 +124,9 @@ async def recover_zip(update, context):
     command = (message.text or '').split()[0].split('@')[0]
     if command == '/zip_boglash':
         document = getattr(target, 'document', None)
-        match = re.fullmatch(r'(LD-[0-9]{6,})_hujjatlar\.zip', getattr(document, 'file_name', '') or '')
+        # Old archives keep their LD prefix; new ones use plain numbers.
+        match = re.fullmatch(r'([1-9][0-9]*|LD-[0-9]{6,})_hujjatlar\.zip',
+                             getattr(document, 'file_name', '') or '')
         if not match or getattr(getattr(target, 'from_user', None), 'id', None) != context.bot.id:
             await message.reply_text('Shu bot yuborgan ariza ZIP fayliga Reply qiling.')
             return

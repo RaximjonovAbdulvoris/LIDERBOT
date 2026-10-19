@@ -12,6 +12,6 @@ def application_code(data):
     with sqlite3.connect(directory / 'application_numbers.sqlite3', timeout=15) as db:
         db.execute('CREATE TABLE IF NOT EXISTS sequence (id INTEGER PRIMARY KEY AUTOINCREMENT)')
         number = db.execute('INSERT INTO sequence DEFAULT VALUES').lastrowid
-    code = f'LD-{number:06d}'
+    code = str(number)
     data['_application_code'] = code
     return code

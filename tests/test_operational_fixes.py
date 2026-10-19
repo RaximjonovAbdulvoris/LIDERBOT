@@ -98,6 +98,17 @@ class OperationalFixesTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(await operator._delete_operator_application(ctx, key, record))
         self.assertIn({'chat_id': -1001, 'message_id': 88}, bot.deletes)
 
+    async def test_admin_can_bind_plain_number_zip(self):
+        bot, ctx, key, record, message = self.setup_case()
+        record['code'] = '2'
+        record['zip_delivery_state'] = 'unknown'
+        target = N(message_id=88, from_user=N(id=777), document=N(file_name='2_hujjatlar.zip'))
+        event = N(effective_message=N(text='/zip_boglash', reply_to_message=target, sender_chat=None,
+                                     reply_text=AsyncMock()), effective_chat=N(id=-1001), effective_user=N(id=1))
+        await downloads.recover_zip(event, ctx)
+        self.assertEqual(record['zip_message_ids'], [88])
+        self.assertNotIn('zip_delivery_state', record)
+
     async def test_nonadmin_or_foreign_bot_zip_cannot_unlock_unknown_delivery(self):
         bot, ctx, key, record, message = self.setup_case()
         record['zip_delivery_state'] = 'unknown'
