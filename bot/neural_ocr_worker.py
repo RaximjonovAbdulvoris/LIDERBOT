@@ -150,6 +150,32 @@ def licence_identity(words):
         return result
 
     ones, twos = numbered(1), numbered(2)
+    if not ones and not twos:
+        # On some photographed licences the tiny 1/2 numerals disappear while
+        # all three name lines and the numbered birth row remain legible.
+        # Require one complete field 3, two single-word names directly above
+        # a visibly longer third name line, and strict column/line alignment. The
+        # patronymic is only a positional check and is never returned.
+        thirds = [w for w in words if w.confidence >= 90 and
+                  re.fullmatch(r'3[.)]?\s*.+?\s*' + PRINTED_DATE, w.text.strip())]
+        if len(thirds) == 1:
+            third = thirds[0]
+            aligned = sorted((w for w in words if w.confidence >= 90 and
+                clean_name(w.text) and
+                .35 * third.height < third.top - w.top < 2.9 * third.height and
+                abs(w.left - (third.left + third.height)) < third.height * .65),
+                key=lambda w: w.top)
+            if len(aligned) == 3:
+                first, second, parent = aligned
+                surname, given, parent_name = (clean_name(w.text) for w in aligned)
+                if (first.confidence >= 95 and second.confidence >= 95 and
+                    len(surname.split()) == len(given.split()) == 1 and
+                    (len(parent_name.split()) >= 2 or
+                     len(parent_name) >= max(len(surname), len(given)) + 2) and
+                    .45 * third.height < second.top - first.top < 1.25 * third.height and
+                    .4 * third.height < parent.top - second.top < 1.25 * third.height):
+                    return surname, given
+        return None
     if not ones and len(twos) == 1:
         # A tiny printed '1.' can disappear while the surname remains clear.
         # Recover only inside the numbered identity block, aligned above 2.

@@ -59,6 +59,21 @@ class NeuralOCRTests(unittest.IsolatedAsyncioTestCase):
         words[0] = row('EXAMPLE', x=700, y=628, height=24)
         self.assertIsNone(licence_identity(words))
 
+    def test_both_tiny_name_labels_missing_but_numbered_birth_row_present(self):
+        from bot.neural_ocr_worker import licence_identity
+        names = [row('EXAMPLE', x=274, y=573, width=75, height=19),
+                 row('PERSON', x=274, y=589, width=71, height=20),
+                 row("PARENT O'GLI", x=274, y=603, width=112, height=22),
+                 row('3TESTCITY 20 12 2000', x=251, y=620, width=168, height=22)]
+        self.assertEqual(licence_identity(names), ('EXAMPLE', 'PERSON'))
+        names[2] = row('PARENTOGLI', x=274, y=603, width=112, height=22)
+        self.assertEqual(licence_identity(names), ('EXAMPLE', 'PERSON'))
+        self.assertIsNone(licence_identity(names[:-1]))
+        self.assertIsNone(licence_identity(names +
+            [row('SECOND', x=273, y=574, height=19)]))
+        names[1] = row('PERSON', x=400, y=589, height=20)
+        self.assertIsNone(licence_identity(names))
+
     def test_split_field_two_label_overlaps_the_name_box(self):
         from bot.neural_ocr_worker import licence_identity
         words = [row('EXAMPLE', x=507, y=302, width=93, height=28, confidence=97),
