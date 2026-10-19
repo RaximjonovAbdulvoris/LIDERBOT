@@ -68,6 +68,9 @@ class NeuralOCRTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(licence_identity(names), ('EXAMPLE', 'PERSON'))
         names[2] = row('PARENTOGLI', x=274, y=603, width=112, height=22)
         self.assertEqual(licence_identity(names), ('EXAMPLE', 'PERSON'))
+        names[2] = row('PARENTOGLI', x=274, y=603, width=112, height=22,
+                       confidence=88)
+        self.assertEqual(licence_identity(names), ('EXAMPLE', 'PERSON'))
         self.assertIsNone(licence_identity(names[:-1]))
         self.assertIsNone(licence_identity(names +
             [row('SECOND', x=273, y=574, height=19)]))

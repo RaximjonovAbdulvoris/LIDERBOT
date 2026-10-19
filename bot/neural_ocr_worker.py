@@ -160,7 +160,9 @@ def licence_identity(words):
                   re.fullmatch(r'3[.)]?\s*.+?\s*' + PRINTED_DATE, w.text.strip())]
         if len(thirds) == 1:
             third = thirds[0]
-            aligned = sorted((w for w in words if w.confidence >= 90 and
+            # The third line is only a positional cue and need not be read
+            # as confidently as the surname and given name themselves.
+            aligned = sorted((w for w in words if w.confidence >= 85 and
                 clean_name(w.text) and
                 .35 * third.height < third.top - w.top < 2.9 * third.height and
                 abs(w.left - (third.left + third.height)) < third.height * .65),
