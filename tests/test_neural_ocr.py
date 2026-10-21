@@ -87,6 +87,26 @@ class NeuralOCRTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(licence_identity(words), ('EXAMPLE', 'PERSON'))
         self.assertIsNone(licence_identity(words[:-1]))
 
+    def test_attached_field_two_uses_name_column_when_one_label_fades(self):
+        from bot.neural_ocr_worker import licence_identity
+        words = [row('NEMATILLAYEV', x=510, y=300, width=185, height=30),
+                 row('2. HAYOTILLO', x=465, y=335, width=205, height=30),
+                 row("NASURILLO O'G'LI", x=510, y=370, width=240, height=30),
+                 row('3. ANDIJON VILOYATI 13.03.1994', x=465, y=405,
+                     width=415, height=30)]
+        self.assertEqual(licence_identity(words), ('NEMATILLAYEV', 'HAYOTILLO'))
+
+    def test_name_when_birth_label_and_date_have_overlapping_boxes(self):
+        from bot.neural_ocr_worker import licence_identity
+        words = [row('SURNAME', x=439, y=683, width=197, height=32, confidence=96),
+                 row('2', x=407, y=724, width=21, height=23),
+                 row('GIVEN', x=437, y=718, width=152, height=34, confidence=98),
+                 row("FATHER O'GLI", x=444, y=752, width=224, height=34),
+                 row('3', x=405, y=793, width=40, height=26),
+                 row('ANDIJONVILOYATI13.03.1994', x=438, y=782,
+                     width=382, height=42, confidence=93)]
+        self.assertEqual(licence_identity(words), ('SURNAME', 'GIVEN'))
+
     def test_split_birth_label_and_dropped_date_punctuation(self):
         values = fields_from_rows([
             row('3.', x=430, y=265, width=30, height=23, confidence=89),
@@ -214,12 +234,15 @@ class LicenceIdentityTests(unittest.TestCase):
         from PIL import Image
         from unittest.mock import Mock
         box = [[10, 10], [180, 10], [180, 45], [10, 45]]
-        engine = Mock(side_effect=[([(box, 'AB1234567', .99)], None)] * 3 +
-                                  [([(box, 'AB1234568', .99)], None)])
+        engine = Mock(side_effect=[([['AB1234567', .99]], None)] * 2 +
+                                  [([['AB1234568', .99]], None)] * 2)
         image = Image.new('RGB', (960, 1280))
         candidate = row('AB1234567', x=650, y=820, width=140, height=30)
         self.assertIsNone(refine_registration(engine, image, [candidate]))
-        engine = Mock(return_value=([(box, 'AB1234567', .99)], None))
+        engine = Mock(return_value=([['AB1234567', .99]], None))
+        self.assertEqual(refine_registration(engine, image, [candidate]), 'AB1234567')
+        engine = Mock(side_effect=[([['AB1234567', .99]], None)] * 3 +
+                                  [([['AB1234568', .99]], None)])
         self.assertEqual(refine_registration(engine, image, [candidate]), 'AB1234567')
         self.assertLess(engine.call_args.args[0].shape[0], 300)
         self.assertIsNone(refine_registration(engine, image, []))
