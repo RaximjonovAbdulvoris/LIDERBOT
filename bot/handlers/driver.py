@@ -181,12 +181,11 @@ async def check_membership(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     context.user_data["_application_region"] = region
     await update.effective_message.reply_text(
         f"{premium_markup('APPLICATION', '📝')} <b>{region_name(region)} — haydovchilik arizasi</b>\n\n"
-        "Ism va familiyangiz pravangizdan avtomatik o‘qiladi.\n"
-        "Iltimos, <b>telefon raqamingizni</b> yuboring:",
+        "Iltimos, <b>ism va familiyangizni</b> yozing. "
+        "Hujjatdagi ma’lumotlar keyin alohida tekshiriladi:",
         parse_mode="HTML",
-        reply_markup=ReplyKeyboardMarkup([[contact_button()]], resize_keyboard=True, one_time_keyboard=True),
     )
-    return PHONE
+    return NAME
 
 
 # -------------------- 1. name --------------------
