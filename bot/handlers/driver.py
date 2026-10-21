@@ -630,7 +630,7 @@ async def _send_to_driver_group(context: ContextTypes.DEFAULT_TYPE):
         f"<b>WB LIDER · HAYDOVCHI ARIZASI</b>\n"
         f"Ariza: <code>{code}</code>\n\n"
         f"<b>Arizachi</b>\n{user_link_html}\n"
-        f"Kiritgan ism-familiyasi: <code>{h(d.get('name') or 'Kiritilmagan')}</code>\n\n"
+        f"Kiritgan ism-familiyasi: {h(d.get('name') or 'Kiritilmagan')}\n\n"
     )
     suffix = "\n\n<b>Operator boshqaruvi</b>\nQuyidagi amallardan birini tanlang."
     details = prefix + driver_details(initial, d.get('phone'), d.get('car_plate')) + suffix
