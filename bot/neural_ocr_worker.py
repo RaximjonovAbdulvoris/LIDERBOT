@@ -139,6 +139,22 @@ def clean_place(text):
 def licence_identity(words):
     # Only the printed field 2 belongs to the given name. The line below it
     # often contains the patronymic and must not be shown to operators.
+    def birth_rows():
+        complete = [w for w in words if w.confidence >= 90 and
+                    re.fullmatch(r'3[.)]?\s*.+?\s*' + PRINTED_DATE, w.text.strip())]
+        anchors = [w for w in words if w.confidence >= 90 and
+                   re.fullmatch(r'3[.)]?', w.text.strip())]
+        for anchor in anchors:
+            matches = [w for w in words if w is not anchor and w.confidence >= 90
+                       and w.left > anchor.left
+                       and -anchor.width * .5 <= w.left - anchor.left - anchor.width < anchor.height * 3
+                       and abs(w.top + w.height / 2 - anchor.top - anchor.height / 2)
+                       < max(w.height, anchor.height) * .6
+                       and re.fullmatch(r'.+?\s*' + PRINTED_DATE, w.text.strip())]
+            if len(matches) == 1:
+                complete.append(anchor)
+        return complete
+
     def numbered(rank):
         result = []
         for word in words:
@@ -191,18 +207,21 @@ def licence_identity(words):
                       and clean_name(w.text)]
         if attached:
             given_rows = [(second, attached)]
-        thirds = [w for w in words if w.confidence >= 90
-                  and re.fullmatch(r'3[.)]?\s*.+?\s*' + PRINTED_DATE, w.text.strip())
-                  and 0 < w.top - second.top < max(w.height, second.height) * 4
+        thirds = [w for w in birth_rows()
+                  if 0 < w.top - second.top < max(w.height, second.height) * 4
                   and abs(w.left - second.left) < max(w.height, second.height) * 1.4]
         if len(given_rows) != 1 or len(thirds) != 1:
             return None
         given_box, given = given_rows[0]
+        # The `2.` label starts to the left of its attached name. Compare the
+        # surname with the name column, not the tiny printed numeral.
+        name_left = (second.left + max(second.height, second.width * .12)
+                     if attached else given_box.left)
         candidates = [(w, clean_name(w.text)) for w in words
                       if w.confidence >= 95 and clean_name(w.text)
                       and .6 * max(w.height, given_box.height) < given_box.top - w.top
                       < 1.8 * max(w.height, given_box.height)
-                      and abs(w.left - given_box.left) < max(w.height, given_box.height) * .5]
+                      and abs(w.left - name_left) < max(w.height, given_box.height) * 1.2]
         if len(candidates) != 1:
             return None
         return candidates[0][1], given
@@ -258,22 +277,28 @@ def refine_registration(engine, image, words):
     if len(candidates) != 1:
         return None
     word = candidates[0]
-    margin = max(12, int(word.height * 2))
-    crop = image.crop((max(0, int(word.left) - margin),
-                       max(0, int(word.top) - margin),
-                       min(image.width, int(word.left + word.width) + margin * 2),
-                       min(image.height, int(word.top + word.height) + margin * 2)))
-    contrast = ImageOps.autocontrast(crop)
-    views = (ImageOps.invert(crop), crop, contrast,
-             contrast.filter(ImageFilter.UnsharpMask(radius=1, percent=150, threshold=2)))
+    # A wide crop includes the control code and the security pattern: RapidOCR
+    # can append a digit from either, despite reading the full card correctly.
+    # Recognize the detected glyph box with two narrow, independent margins.
+    views = []
+    for margin in (2, 5):
+        crop = image.crop((max(0, int(word.left) - margin),
+                           max(0, int(word.top) - margin),
+                           min(image.width, int(word.left + word.width) + margin),
+                           min(image.height, int(word.top + word.height) + margin)))
+        scaled = crop.resize((crop.width * 2, crop.height * 2), Image.Resampling.BICUBIC)
+        views.extend((scaled, ImageOps.invert(scaled)))
     readings = []
     for view in views:
-        rows, _ = engine(np.array(view)[:, :, ::-1].copy())
-        matches = {normalize({'vehicle_registration': match[1]})['vehicle_registration']
-                   for _, text, confidence in rows or [] if confidence >= .90
-                   for match in [re.fullmatch(SERIAL, text.strip().upper())] if match}
-        readings.append(next(iter(matches)) if len(matches) == 1 else None)
-    return unanimous(readings)
+        rows, _ = engine(np.array(view)[:, :, ::-1].copy(), use_det=False, use_cls=False)
+        if not rows or len(rows) != 1:
+            readings.append(None)
+            continue
+        text, confidence = rows[0]
+        match = re.fullmatch(SERIAL, text.strip().upper()) if confidence >= .90 else None
+        readings.append(normalize({'vehicle_registration': match[1]})['vehicle_registration'] if match else None)
+    expected = normalize({'vehicle_registration': word.text})['vehicle_registration']
+    return expected if readings.count(expected) >= 3 else None
 
 
 def certificate_serial_candidate(words, width, height):
@@ -364,7 +389,10 @@ def read_document(engine, raw, source, emit=None, return_kind=False):
         if opened.width * opened.height > 30_000_000:
             raise ValueError('Image too large')
         image = ImageOps.exif_transpose(opened).convert('RGB')
-    image.thumbnail((1600, 1600), Image.Resampling.LANCZOS)
+    # The certificate series is tiny and overlaps a hologram; shrinking a
+    # 2048px phone image to 1600px invents trailing glyphs on real samples.
+    image.thumbnail((2000, 2000) if source.startswith('tech_') else (1600, 1600),
+                    Image.Resampling.LANCZOS)
     result, _ = engine(np.array(ImageOps.invert(image))[:, :, ::-1].copy())
     detected = document_kind(result)
     if not detected and source not in ('license_front', 'tech_back'):
