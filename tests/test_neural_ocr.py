@@ -14,6 +14,16 @@ def row(text, x=300, y=300, confidence=99, width=200, height=30):
 
 
 class NeuralOCRTests(unittest.IsolatedAsyncioTestCase):
+    def test_sideways_licence_rotation_prefers_anchored_fields(self):
+        from bot.neural_ocr_worker import rotation_evidence
+        def box(x, y, width=160, height=30):
+            return [[x, y], [x + width, y], [x + width, y + height], [x, y + height]]
+        weak = [(box(10, 10), '4b.11.12.2030', .99)]
+        strong = weak + [(box(10, 50), '4d.12345678901234', .99),
+                         (box(10, 90), '5.AB1234567', .99)]
+        self.assertGreater(rotation_evidence(strong, 'license_front', 900, 1400),
+                           rotation_evidence(weak, 'license_front', 900, 1400))
+
     async def test_primary_cards_are_processed_before_fallback_images(self):
         file = N(file_size=4, download_as_bytearray=AsyncMock(return_value=b'data'))
         bot = N(get_file=AsyncMock(return_value=file))
