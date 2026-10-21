@@ -383,6 +383,22 @@ def orientation_hint(result, technical=False):
     return 0
 
 
+def rotation_evidence(result, source, width, height):
+    """Count anchored document fields to choose between sideways rotations."""
+    words = []
+    for box, value, confidence in result or []:
+        left, top = min(p[0] for p in box), min(p[1] for p in box)
+        words.append(Word(value, confidence * 100, left, top,
+                          max(p[0] for p in box) - left,
+                          max(p[1] for p in box) - top))
+    fields = fields_from_rows(words, source, width, height)
+    if source == 'license_front':
+        return sum(bool(fields.get(key)) for key in (
+            'pinfl', 'birth_date', 'birth_place', 'license_number',
+            'license_expiry')) + 2 * bool(licence_identity(words))
+    return sum(bool(fields.get(key)) for key in ('vehicle_registration',))
+
+
 def read_document(engine, raw, source, emit=None, return_kind=False):
     import numpy as np
     with Image.open(BytesIO(raw)) as opened:
@@ -407,6 +423,18 @@ def read_document(engine, raw, source, emit=None, return_kind=False):
             angle = orientation_hint(result, technical=source.startswith('tech_'))
             if not angle:
                 break
+            if angle == 90 and source == 'license_front':
+                # Vertical text reveals a sideways card, but not which way
+                # the camera was turned. Compare both rotations using only
+                # numbered, anchored fields before deciding.
+                candidates = []
+                for turn in (90, 270):
+                    rotated = image.rotate(turn, expand=True)
+                    rows, _ = engine(np.array(ImageOps.invert(rotated))[:, :, ::-1].copy())
+                    score = rotation_evidence(rows, source, rotated.width, rotated.height)
+                    candidates.append((score, rotated, rows))
+                _, image, result = max(candidates, key=lambda item: item[0])
+                continue
             image = image.rotate(angle, expand=True)
             result, _ = engine(np.array(ImageOps.invert(image))[:, :, ::-1].copy())
     words = []
